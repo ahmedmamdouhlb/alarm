@@ -80,7 +80,6 @@ class NotificationHandler(private val context: Context) {
             .setAutoCancel(true)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
-            .setDeleteIntent(stopPendingIntent)
             .setSound(null)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
