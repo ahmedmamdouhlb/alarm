@@ -17,6 +17,7 @@ class AudioService(private val context: Context) {
 
     private val mediaPlayers = ConcurrentHashMap<Int, MediaPlayer>()
     private val timers = ConcurrentHashMap<Int, Timer>()
+    private val autoStopTimers = ConcurrentHashMap<Int, Timer>()
 
     private var onAudioComplete: (() -> Unit)? = null
 
@@ -39,7 +40,7 @@ class AudioService(private val context: Context) {
         fadeDuration: Duration?,
         fadeSteps: List<VolumeFadeStep>
     ) {
-        stopAudio(id) // Stop and release any existing MediaPlayer and Timer for this ID
+        stopAudio(id) // Stop and release any existing MediaPlayer and Timers for this ID
 
         val baseAppFlutterPath = context.filesDir.parent?.plus("/app_flutter/")
         val adjustedFilePath = when {
@@ -52,7 +53,6 @@ class AudioService(private val context: Context) {
             MediaPlayer().apply {
                 when {
                     adjustedFilePath.startsWith("flutter_assets/") -> {
-                        // It's an asset file
                         val assetManager = context.assets
                         val descriptor = assetManager.openFd(adjustedFilePath)
                         setDataSource(
@@ -63,7 +63,6 @@ class AudioService(private val context: Context) {
                     }
 
                     else -> {
-                        // Handle local files and adjusted paths
                         setDataSource(adjustedFilePath)
                     }
                 }
@@ -80,15 +79,25 @@ class AudioService(private val context: Context) {
 
                 mediaPlayers[id] = this
 
+                val fadeTimer = Timer(true)
+                timers[id] = fadeTimer
+
                 if (fadeSteps.isNotEmpty()) {
-                    val timer = Timer(true)
-                    timers[id] = timer
-                    startStaircaseFadeIn(this, fadeSteps, timer)
+                    startStaircaseFadeIn(this, fadeSteps, fadeTimer)
                 } else if (fadeDuration != null) {
-                    val timer = Timer(true)
-                    timers[id] = timer
-                    startFadeIn(this, fadeDuration, timer)
+                    startFadeIn(this, fadeDuration, fadeTimer)
                 }
+
+                // ⏲️ Auto-stop after 3 minutes
+                autoStopTimers[id]?.cancel()
+                val autoStopTimer = Timer(true)
+                autoStopTimers[id] = autoStopTimer
+                autoStopTimer.schedule(object : TimerTask() {
+                    override fun run() {
+                        stopAudio(id)
+                        onAudioComplete?.invoke()
+                    }
+                }, 3 * 60 * 1000) // 3 minutes = 180000 ms
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -99,6 +108,9 @@ class AudioService(private val context: Context) {
     fun stopAudio(id: Int) {
         timers[id]?.cancel()
         timers.remove(id)
+
+        autoStopTimers[id]?.cancel()
+        autoStopTimers.remove(id)
 
         mediaPlayers[id]?.apply {
             if (isPlaying) {
@@ -180,6 +192,9 @@ class AudioService(private val context: Context) {
     fun cleanUp() {
         timers.values.forEach(Timer::cancel)
         timers.clear()
+
+        autoStopTimers.values.forEach(Timer::cancel)
+        autoStopTimers.clear()
 
         mediaPlayers.values.forEach { mediaPlayer ->
             if (mediaPlayer.isPlaying) {
