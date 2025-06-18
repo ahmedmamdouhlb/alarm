@@ -21,6 +21,8 @@ import com.gdelataillade.alarm.services.NotificationHandler
 import com.gdelataillade.alarm.services.NotificationOnKillService
 import io.flutter.Log
 import kotlinx.serialization.json.Json
+import java.util.Timer
+import java.util.TimerTask
 
 class AlarmService : Service() {
     companion object {
@@ -39,6 +41,7 @@ class AlarmService : Service() {
     private var alarmStorage: AlarmStorage? = null
     private var showSystemUI: Boolean = true
     private var shouldStopAlarmOnTermination: Boolean = true
+    private var autoStopTimer: Timer? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -48,9 +51,14 @@ class AlarmService : Service() {
         vibrationService = VibrationService(this)
         volumeService = VolumeService(this)
         alarmStorage = AlarmStorage(this)
+
+
+
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+
+
         if (intent == null) {
             stopSelf()
             return START_NOT_STICKY
@@ -59,6 +67,16 @@ class AlarmService : Service() {
         val id = intent.getIntExtra("id", 0)
         alarmId = id
         val action = intent.getStringExtra(AlarmReceiver.EXTRA_ALARM_ACTION)
+
+        autoStopTimer?.cancel()
+        autoStopTimer = Timer(true)
+        // ⏲️ Auto-stop alarm after 3 minutes
+        autoStopTimer?.schedule(object : TimerTask() {
+            override fun run() {
+                Log.d(TAG, "Auto-stopping alarm after 3 minutes.")
+                unsaveAlarm(alarmId)
+            }
+        }, 3 * 60 * 1000) // 3 minutes
 
         if (action == "STOP_ALARM" && id != 0) {
             unsaveAlarm(id)
@@ -192,7 +210,10 @@ class AlarmService : Service() {
                 this.stopService(serviceIntent)
                 Log.d(TAG, "Turning off the warning notification.")
             } else {
-                Log.d(TAG, "Keeping the warning notification on because there are other pending alarms.")
+                Log.d(
+                    TAG,
+                    "Keeping the warning notification on because there are other pending alarms."
+                )
             }
         }
 
@@ -209,7 +230,7 @@ class AlarmService : Service() {
         } else {
             Log.d(TAG, "Keeping alarm running as androidStopAlarmOnTermination is false.")
         }
-        
+
         super.onTaskRemoved(rootIntent)
     }
 
@@ -235,7 +256,10 @@ class AlarmService : Service() {
         // Notify the plugin about the alarm being stopped.
         AlarmPlugin.alarmTriggerApi?.alarmStopped(id.toLong()) {
             if (it.isSuccess) {
-                Log.d(TAG, "Alarm stopped notification for $id was processed successfully by Flutter.")
+                Log.d(
+                    TAG,
+                    "Alarm stopped notification for $id was processed successfully by Flutter."
+                )
             } else {
                 Log.d(TAG, "Alarm stopped notification for $id encountered error in Flutter.")
             }
@@ -276,6 +300,7 @@ class AlarmService : Service() {
         vibrationService?.stopVibrating()
         volumeService?.restorePreviousVolume(showSystemUI)
         volumeService?.abandonAudioFocus()
+        autoStopTimer?.cancel()
 
         AlarmRingingLiveData.instance.update(false)
 

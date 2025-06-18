@@ -77,7 +77,7 @@ class NotificationHandler(private val context: Context) {
             .setContentText(notificationSettings.body)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setAutoCancel(true)
+            .setAutoCancel(false)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
             .setSound(null)
