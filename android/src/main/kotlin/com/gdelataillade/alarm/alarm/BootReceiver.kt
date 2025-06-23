@@ -3,7 +3,7 @@ package com.gdelataillade.alarm.alarm
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.util.Log
+import io.flutter.Log
 import com.gdelataillade.alarm.services.AlarmStorage
 import com.gdelataillade.alarm.api.AlarmApiImpl
 

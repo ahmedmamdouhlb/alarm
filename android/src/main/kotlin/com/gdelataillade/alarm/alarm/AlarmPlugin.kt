@@ -63,11 +63,11 @@ class AlarmPlugin : FlutterPlugin, ActivityAware {
         val activity = activity ?: return@Observer
         if (it) {
             Log.d(TAG, "Making app visible on lock screen...")
-            activity.setShowWhenLocked(false)
+            activity.setShowWhenLocked(true)
             activity.setTurnScreenOn(true)
-//            val keyguardManager =
-//                activity.applicationContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-//            keyguardManager.requestDismissKeyguard(activity, null)
+            val keyguardManager =
+                activity.applicationContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+            keyguardManager.requestDismissKeyguard(activity, null)
         } else {
             Log.d(TAG, "Reverting making app visible on lock screen...")
             activity.setShowWhenLocked(false)

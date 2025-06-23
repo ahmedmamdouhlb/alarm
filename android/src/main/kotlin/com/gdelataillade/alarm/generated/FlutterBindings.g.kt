@@ -4,7 +4,7 @@
 
 package com.gdelataillade.alarm.generated
 
-import android.util.Log
+import io.flutter.Log
 import io.flutter.plugin.common.BasicMessageChannel
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.EventChannel
@@ -496,19 +496,24 @@ class AlarmTriggerApi(private val binaryMessenger: BinaryMessenger, private val 
   }
   fun alarmStopped(alarmIdArg: Long, callback: (Result<Unit>) -> Unit)
 {
-    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
-    val channelName = "dev.flutter.pigeon.alarm.AlarmTriggerApi.alarmStopped$separatedMessageChannelSuffix"
-    val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
-    channel.send(listOf(alarmIdArg)) {
-      if (it is List<*>) {
-        if (it.size > 1) {
-          callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))
+    try {
+
+      val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+      val channelName = "dev.flutter.pigeon.alarm.AlarmTriggerApi.alarmStopped$separatedMessageChannelSuffix"
+      val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+      channel.send(listOf(alarmIdArg)) {
+        if (it is List<*>) {
+          if (it.size > 1) {
+            callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))
+          } else {
+            callback(Result.success(Unit))
+          }
         } else {
-          callback(Result.success(Unit))
+          callback(Result.failure(FlutterBindingsPigeonUtils.createConnectionError(channelName)))
         }
-      } else {
-        callback(Result.failure(FlutterBindingsPigeonUtils.createConnectionError(channelName)))
-      } 
+      }
+    } catch (e: Exception){
+      Log.w("Custom", "Error: $e")
     }
   }
 }
